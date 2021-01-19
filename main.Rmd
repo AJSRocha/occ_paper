@@ -55,6 +55,8 @@ names(bio_ceph)
 bio_ceph %>% filter()
 ```
 
+
+
 # Compra de dados???
 
 ```{r}
@@ -89,7 +91,11 @@ teste <- dbGetQuery(con, readr::read_file('bio_naut.sql'))
 
 - [ ] Procurar ampliaçõe de SOL
 
+# Limpeza de dados
 
+```{r}
+load("C:/Google Drive/2021_occ_paper/outputs_queries_naut.Rdata")
+```
 
 ## Desembarques
  
@@ -117,9 +123,6 @@ portos_slv <- read.csv("dados/codigos_portos.csv")
 
 ## Biologicas
 
-- [ ] Verificar outliers nos comprimentos
-- [ ] Uniformizar portos entre as duas tabelas
-
 ```{r bio_16}
 bio16 <- read.csv("allspp_19972016_bio.csv", sep = ";", dec = ",")
 
@@ -135,7 +138,7 @@ bio16 %>%
                                REGIAO == "C" ~ "27.a.c.s",
                                         TRUE ~ "27.a.s.a"),
             ARTE_EU = factor(ARTE_EU),
-            COD_FAO = factor("OCC"),
+            especie_am = factor("OCC"),
             land_kg = DESEMBARQUE, # desembarque da denominação na viagem
             PESO_AM = PESO_AM,
             N_OBS = N_OBS,
@@ -161,20 +164,22 @@ bio16 %>%
                                              EST_MATURACAO == "3" ~ "3",
                                              EST_MATURACAO == "5" ~ "5",
                                              EST_MATURACAO == "4" ~ "4")),
-            C_PENIS = C_PENIS,
-            C_TEST = C_TEST,
+            # C_PENIS = C_PENIS,
+            # C_TEST = C_TEST,
+            P_TEST = P_TEST,
             P_CESPERM = P_CESPERM,
             P_OVARIO = P_OVARIO,
             P_GOVID = P_GOVID,
             D_GOVID = D_GOVID,
-            C_GASS = C_GASS,
-            P_GASS = P_GASS,
+            # C_GASS = C_GASS,
+            # P_GASS = P_GASS,
             D_GNID = D_GNID,
-            P_GNID = P_GNID,
-            P_COVID = P_COVID,
+            # P_GNID = P_GNID,
+            # P_COVID = P_COVID,
             E_ESTOM = E_ESTOM,
             P_GDIGEST = P_GDIGEST,
-            FECUNDADA = factor(FECUNDADA)) 
+            # FECUNDADA = factor(FECUNDADA)
+            ) 
 
 ```
 
@@ -182,6 +187,7 @@ bio16 %>%
 bio_naut %>% group_by(ano, trim, estrategia_amostragem) %>%
   summarise(cona = length(unique(id_viagem)))
 
+bio19 <-
 bio_naut %>%
   filter(estrategia_amostragem == "Species Focus") %>%
   transmute(id_viagem = factor(id_viagem),
@@ -197,12 +203,122 @@ bio_naut %>%
             trim = factor(trim),
             ANO = factor(ano),
             PORTO = factor(lota),
-            land_kg = peso_total_dom,
             cat_com = factor(cat_com),
-            )
-  
-
-
+            especie_am = factor("OCC"),
+            land_kg = peso_total_dom,
+            peso_amostrado_dom = peso_amostrado_dom,
+            peso_total_caixa = peso_total_caixa,
+            peso_am_caixa = peso_am_caixa,
+            peso_total_spp = peso_total_spp,
+            peso_am_spp = peso_am_spp,
+            n_total_caixa = n_total_caixa,
+            n_amostrados_caixa = n_amostrados_caixa,
+            n_total_spp = n_total_spp,
+            n_amostrado_comprimentos = n_amostrado_comprimentos,
+            n_nao_observados_tot = n_nao_observados_tot,
+            SEXO = factor(sexo),
+            E_ESTOM = factor(estado_replecao_estomago),
+            EST_MATURACAO = factor(case_when(estado_maturacao == "1 - imatura" ~ 1,
+                                       estado_maturacao == "1 - imaturo" ~ 1,
+                                       estado_maturacao == "2 - maturação" ~ 2,
+                                       estado_maturacao == "3 - matura" ~ 3,
+                                       estado_maturacao == "3 - maturo" ~ 3,
+                                       estado_maturacao == "4 - postura" ~ 4,
+                                       estado_maturacao == "4 - senil" ~ 4,
+                                       estado_maturacao == "5 - senil" ~ 5)),
+            comp_manto = comp_manto,
+            peso_total = peso_total,
+            peso_eviscerado = peso_eviscerado,
+            m_peso_complex_espermatoforico = m_peso_complex_espermatoforico,
+            peso_testiculo = peso_testiculo,
+            peso_gland_oviducal = peso_gland_oviducal,
+            peso_ovario = peso_ovario,
+            peso_gland_digestiva = peso_gland_digestiva) %>%
+  filter(DATA <= "2019-12-31")
 ```
 
+## Lotas
+
+```{r lota16}
+lota16 <- read.csv("allspp_19972016_cmp.csv", sep = ";", dec = ",")
+
+# lota16 <- 
+  lota16 %>% 
+    filter(COD_FAO == 'OCC') %>%
+    transmute(ID_VIAGEM = factor(ID_VIAGEM),
+              ID_AMOSTRA = factor(ID_AMOSTRA),
+              DATA = as.POSIXct(DATA_AM, format = ('%d-%m-%Y')),
+              ANO = factor(ANO),
+              PORTO_NOME = factor(PORTO_NOME),
+              REGIAO = case_when(REGIAO == "N" ~ "27.a.c.n",
+                                 REGIAO == "C" ~ "27.a.c.s",
+                                          TRUE ~ "27.a.s.a"),
+              ARTE_EU = factor(ARTE_EU),
+              COD_FAO = factor('OCC'),
+              land_kg = DESEMBARQUE,
+              PESO_AM = PESO_AM,
+              cat = factor(
+                case_when(
+                  CAT %in% c("0", "T0", "~0", "T0.", "TO", "T", "TUD", "MIS") ~ "T0",
+                  CAT %in% c("1", "T1", "T1*", "T1+") ~ "T1",
+                  CAT %in% c("T2", "2", "T2*") ~ "T2",
+                  CAT %in% c("3", "T3"," T3","T3R") ~ "T3",
+                  CAT %in% c("T4", "4") ~ "T4",
+                  CAT %in% c("T5", "5", "T54") ~ "T5",
+                  CAT %in% c("T6", "6") ~ "T6",
+                  CAT %in% c("P", "P-", "P.") ~ "P",
+                  CAT %in% c("MP") ~ "MP",
+                  CAT %in% c("M") ~ "M",
+                  CAT %in% c("GM") ~ "GM",
+                  CAT %in% c("G", "G+") ~ "G",
+                  CAT %in% c("999") ~ "tatudouiui")),
+              PESO_A_C = PESO_A_C,
+              PESO_D_C = PESO_D_C,
+              N_IND = N_IND,
+              C_CLASSE = C_CLASSE,
+              INDIF = INDIF
+              )
+```
+
+
+```{r lota19}
+lota19 <-
+lota_pesos_comp_polvos %>%
+            # filter(estrategia_amostragem == "Concurrent Sampling") %>%
+            transmute(id_viagem = factor(id_viagem),
+                      id_denominacao = factor(id_denominacao),
+                      id_caixa = factor(id_caixa),
+                      id_spp = factor(id_spp),
+                      REGIAO = factor( 
+                               case_when(zona == "Sul" ~ "27.9.a.s.a",
+                                         zona == "SW" ~ "27.9.a.c.s",
+                                         zona == "NW" ~ "27.a.c.n")),
+                      DATA = as.POSIXct(data_venda, format = '%Y-%m-%d'),
+                      ANO = factor(ano),
+                      MES = factor(mes),
+                      PORTO = factor(lota),
+                      cat_com = factor(cat_com),
+                      especie_am = factor("OCC"),
+                      land_kg = peso_total_dom,
+                      CAT = factor(cat_com),
+                      peso_amostrado_dom = peso_amostrado_dom,
+                      peso_total_caixa = peso_total_caixa,
+                      peso_am_caixa = peso_am_caixa,
+                      peso_total_spp = peso_total_spp,
+                      peso_am_spp = peso_am_spp,
+                      n_total_caixa = n_total_caixa,
+                      n_amostrados_caixa = n_amostrados_caixa,
+                      n_total_spp = n_total_spp,
+                      n_amostrado_comprimentos = n_amostrado_comprimentos,
+                      n_nao_observados = n_nao_observados,
+                      n_nao_observados_tot = n_nao_observados_tot,
+                      classe_comp = classe_comp)
+```
+
+# TO DO
+- [ ] Verificar outliers nos comprimentos
+- [ ] Uniformizar portos entre as duas tabelas
+- [ ] Não temos categoria nos dados SIC; que fazer?
+- [ ] Uniformizar pesos e comprimentos na lota 19
+- [ ] Ampliações
 
