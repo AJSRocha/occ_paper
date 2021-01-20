@@ -55,8 +55,6 @@ names(bio_ceph)
 bio_ceph %>% filter()
 ```
 
-
-
 # Compra de dados???
 
 ```{r}
@@ -71,7 +69,35 @@ lota_pesos_comp_polvos <- dbGetQuery(con, readr::read_file('lota_pesos_comp_polv
 
 # Biológicas
 
-```{r}
+```{sql query_bio_16}
+--mail de 04.02.2019
+select p1.id_viagem,p1.id_amostra,p1.data,to_char(p1.data,'DD-MM-YYYY') data_am,to_char(p1.data,'RRRR') ano,p2.porto_nome,p2.regiao,
+p1.arte_eu,p1.cod_fao,p1.matricula,p1.navio,p1.desembarque,p1.peso_am,
+p3.cat,p3.peso_a_c,p3.peso_d_c,p3.n_ind,p4.c_classe,p4.indif
+from dbm.tbl_amostra p1, dbm.tbl_porto_old p2, dbm.tbl_cat_amostra p3, dbm.tbl_classe_comp p4
+where p2.porto_slv=p1.porto_slv and p3.id_amostra=p1.id_amostra and p4.id_cat_amostra=p3.id_cat_amostra
+and to_char(p1.data,'RRRR') between 1997 and 2016
+and p1.tipo_amostra='C'
+and p1.cod_fao in ('OCC','COM','EOI','EDT','SQR','SQC','TDQ','SQM','SQE','CTC')
+order by data,porto_nome,matricula,cod_fao,cat,c_classe
+;
+
+
+select p1.id_amostra,p3.ID_BIO_CEFALOPODES,p1.data,to_char(p1.data,'DD-MM-YYYY') data_am,to_char(p1.data,'RRRR') ano,p2.porto_nome,p2.regiao,
+p1.arte_eu,p1.cod_fao,p1.matricula,p1.navio,p1.desembarque,p1.peso_am,
+p3.N_OBS,p3.C_CLASSE,p3.C_INDIVIDUAL,p3.P_INDIVIDUAL,p3.P_EVISCERADO,p3.SEXO,p3.EST_MATURACAO,p3.E_CALCIFICADA,p3.E_CALCIFICADA_TIPO,p3.E_CALCIFICADA_LIDA_OLD,p3.C_PENIS,
+p3.C_TEST,p3.P_TEST,p3.P_CESPERM,p3.P_OVARIO,p3.P_GOVID,p3.D_GOVID,p3.C_GASS,p3.P_GASS,p3.D_GNID,p3.P_GNID,p3.P_COVID,p3.E_ESTOM,p3.P_ESTOM,p3.P_GDIGEST,p3.FECUNDADA,p3.HISTOLOGIA,p3.OBS,p3.C_ESTATOL,
+p3.N_ANEIS_HIALINOS,p3.ID_EST_CALCIFICADAS
+from dbm.tbl_amostra p1, dbm.tbl_porto_old p2, dbm.tbl_bio_cefalopodes p3
+where p2.porto_slv=p1.porto_slv and p3.id_amostra=p1.id_amostra
+and to_char(p1.data,'RRRR') between 1997 and 2016
+and p1.tipo_amostra='B'
+and p1.cod_fao in ('OCC','COM','EOI','EDT','SQR','SQC','TDQ','SQM','SQE','CTC')
+order by data,porto_nome,matricula,cod_fao,n_obs,c_classe
+```
+
+
+```{r query_bio_19}
 teste <- dbGetQuery(con, readr::read_file('bio_naut.sql'))
 ```
 
@@ -133,7 +159,7 @@ bio16 %>%
   transmute(ID_AMOSTRA = factor(ID_AMOSTRA),
             DATA = as.POSIXct(DATA_AM, format = '%d-%m-%Y'),
             ANO = factor(ANO),
-            PORTO = factor(PORTO_NOME),
+            PORTO = droplevels(factor(PORTO_NOME)),
             REGIAO = case_when(REGIAO == "N" ~ "27.a.c.n",
                                REGIAO == "C" ~ "27.a.c.s",
                                         TRUE ~ "27.a.s.a"),
@@ -242,7 +268,7 @@ bio_naut %>%
 ```{r lota16}
 lota16 <- read.csv("allspp_19972016_cmp.csv", sep = ";", dec = ",")
 
-# lota16 <- 
+lota16 <-
   lota16 %>% 
     filter(COD_FAO == 'OCC') %>%
     transmute(ID_VIAGEM = factor(ID_VIAGEM),
@@ -316,9 +342,82 @@ lota_pesos_comp_polvos %>%
 ```
 
 # TO DO
+
 - [ ] Verificar outliers nos comprimentos
+
+  * tabela **bio16** alterna entre comprimentos a cm e mm *corrigido*
+  * bicho de sagres foi pesado em kg *corrigido*
+  * devo um fino ao DD porque ele encontrou o polvo da fuzeta 
+
 - [ ] Uniformizar portos entre as duas tabelas
 - [ ] Não temos categoria nos dados SIC; que fazer?
 - [ ] Uniformizar pesos e comprimentos na lota 19
 - [ ] Ampliações
 
+```{r limpa_bio_16}
+cm_mm <- which(bio16$C_INDIVIDUAL < 40)
+table(bio16[cm_mm,]$PORTO, bio16[cm_mm,]$ANO)
+table(bio16[-cm_mm,]$PORTO, bio16[-cm_mm,]$ANO)
+
+bio16$C_INDIVIDUAL_corr <- bio16$C_INDIVIDUAL
+bio16[cm_mm,]$C_INDIVIDUAL_corr <- bio16[cm_mm,]$C_INDIVIDUAL_corr*10
+
+# corrigir pesos registados em kg - 2 obs
+bio16[is.na(bio16$P_INDIVIDUAL),]$P_INDIVIDUAL <- 0
+bio16[bio16$P_INDIVIDUAL > 0 & bio16$P_INDIVIDUAL < 20,]$P_INDIVIDUAL <- bio16[bio16$P_INDIVIDUAL > 0 & bio16$P_INDIVIDUAL < 20,]$P_INDIVIDUAL * 1000
+
+bio16[is.na(bio16$C_INDIVIDUAL_corr),]$C_INDIVIDUAL_corr <- 0
+bio16[bio16$C_INDIVIDUAL_corr == 12.2,]$C_INDIVIDUAL_corr <- 122
+
+
+  bio16[bio16$C_INDIVIDUAL_corr < 20,]$C_INDIVIDUAL_corr * 10
+
+
+bio16 %>%
+  filter(C_INDIVIDUAL_corr < 500) %>%
+  filter(P_INDIVIDUAL > 0) %>%
+  # filter(REGIAO == "27.a.s.a") %>%
+  ggplot + 
+  geom_point(aes(y = C_INDIVIDUAL_corr, x = P_INDIVIDUAL, col = PORTO)) + 
+  theme_light() + 
+  # geom_hline(aes(yintercept = 40), col = 'red') + 
+  # facet_wrap(REGIAO ~ ANO) + 
+  theme(legend.position = 'bottom')
+```
+
+```{r limpa_bio_19}
+bio19 %>%
+  ggplot + 
+  geom_point(aes(y = comp_manto, x = peso_total, col = PORTO)) + 
+  theme_light() + 
+  # geom_hline(aes(yintercept = 40), col = 'red') + 
+  facet_wrap(REGIAO ~ ANO) + 
+  theme(legend.position = 'bottom')
+
+names(bio19)
+```
+
+```{r limpa_lota_16}
+
+# viagens filhas da puta em sines, medidas ate ao tentaculo:
+# lota16 %>% filter(PORTO_NOME == "SINES" & ANO == 2009) %>%
+#   select(ID_VIAGEM,C_CLASSE) %>%
+#   group_by(ID_VIAGEM) %>%
+#   summarise(ref = min(C_CLASSE))
+viag_sines <- c(106841,106857,106876,106931,106897,106930,106915,106835,106921,107703)
+
+lota16 %>%
+  filter(!C_CLASSE %in% c(998,999)) %>%
+  filter(!ID_VIAGEM %in% viag_sines) %>% View
+    ggplot + 
+  geom_point(aes(y = PESO_AM, x = C_CLASSE, col = PORTO_NOME)) + 
+  theme_light() + 
+  # geom_hline(aes(yintercept = 40), col = 'red') + 
+  facet_wrap(REGIAO ~ .) + 
+  theme(legend.position = 'bottom')
+```
+
+
+## Proposta:
+
+Depois de determninar curvas de peso-comprimento, fazer predict das amostragens em lota e comparar com o peso desembarcado da categoria
