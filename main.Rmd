@@ -124,6 +124,10 @@ load("C:/Google Drive/2021_occ_paper/outputs_queries_naut.Rdata")
 ```
 
 ## Desembarques
+
+```{r}
+portos_slv <- read.csv("dados/codigos_portos.csv")
+```
  
 ```{r}
 land <- read.csv("PT_land_1986_2019.csv", sep = ";")
@@ -141,11 +145,17 @@ land %>%
             MONTH = factor(MONTH),
             SUB.AREA = factor(SUB.AREA),
             land_kg = LANDINGS_WEIGHT_KG)
+
+land <-
+merge(land,
+      (portos_slv %>% select(codporto, nome)),
+      by.x = "HARBOUR",
+      by.y = "codporto",
+      all.x = T, all.y = F)
+
 ```       
 
-```{r}
-portos_slv <- read.csv("dados/codigos_portos.csv")
-```
+
 
 ## Biologicas
 
@@ -416,6 +426,30 @@ lota16 %>%
   facet_wrap(REGIAO ~ .) + 
   theme(legend.position = 'bottom')
 ```
+
+```{r amplia_lota16}
+
+# 1 - acrescentamos desembarque da unidade amostral correspondente: EGRUPART x MES x ANO x LOTA
+
+merge((lota16 %>% mutate(MES = format(lota16$DATA, format = '%m'))),
+      (land %>% select(nome, GEAR, YEAR, MONTH, land_kg)),
+      by.x = c('PORTO_NOME', 'ARTE_EU','ANO', 'MES'),
+      by.y = c('nome', 'GEAR', 'YEAR', 'MONTH'),
+      all.x = T, all.y = F)
+#acabar
+
+lota16 %>%
+  group_by(ID_VIAGEM,cat) %>%
+  summarise(desemb = unique(land_kg),
+            D_C = unique(PESO_D_C)) %>%
+  group_by(ID_VIAGEM) %>%
+  summarise(desemb = unique(desemb),
+            DC = sum(D_C)) %>%
+  filter(abs(desemb - DC) > 0.5) %>% View
+  
+
+```
+* 140 viagens com discrepância: decidir
 
 
 ## Proposta:
