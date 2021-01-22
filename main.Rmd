@@ -126,10 +126,13 @@ load("C:/Google Drive/2021_occ_paper/outputs_queries_naut.Rdata")
 ## Desembarques
 
 ```{r}
+
 portos_slv <- read.csv("dados/codigos_portos.csv")
+portos_slv[182,] <- c(40950, "CAIS DO BICO", "csbic", "NW","AVEIRO", "PTCDB", "CDB",NA,NA)
 ```
  
 ```{r}
+# pulpito é o 826
 land <- read.csv("PT_land_1986_2019.csv", sep = ";")
 
 land <- 
@@ -152,6 +155,75 @@ merge(land,
       by.x = "HARBOUR",
       by.y = "codporto",
       all.x = T, all.y = F)
+
+land19 <- read.csv('dados//1_desembarques-mensais_2019.csv', sep = ';', dec = ',')
+
+land19 <-
+merge(land19,
+      (portos_slv %>% select(codporto, nome)),
+      by.x = "PORTO_SLV",
+      by.y = "codporto",
+      all.x = T, all.y = F)
+
+land19 <-
+land19 %>%
+  filter(ESPECIE_SLV == 826) %>%
+  filter(PESQUEIRO == "N") %>%
+  filter(nome!= "PONTA DELGADA (DOCA)") %>%
+  # # group_by(ANO, MES, nome, ARTE) %>%
+  # summarise(QESTIMADA = sum(QESTIMADA)) %>%
+  # ungroup %>%
+  transmute(HARBOUR = PORTO_SLV,
+            LANDING_COUNTRY = "PRT",
+            GEAR = case_when(ARTE == 5 ~ "PS",
+                             ARTE == 3 ~ "OTB",
+                             ARTE == 13 ~ "MIS"),
+            FISHING_5 = "euseila",
+            SPECIES = "OCC",
+            YEAR = ANO,
+            MONTH = MES,
+            SUB.AREA = factor(case_when(nome %in% c("VIANA DO CASTELO",
+                                                    "CAMINHA",
+                                                    "ESPOSENDE",
+                                                    "V. PRAIA DA ANCORA",
+                                                    "CASTELO DO NEIVA",
+                                                    "FAO",
+                                                    "POVOA DO VARZIM", 
+                                                    "V. CHA",
+                                                    "V. CONDE", 
+                                                    "MATOSINHOS",
+                                                    "ANJEIRAS",
+                                                    "AFURADA",
+                                                    "AGUDA",
+                                                    "ESPINHO",
+                                                    "VALBOM",
+                                                    "AVEIRO",
+                                                    "VAGUEIRA",
+                                                    "TORREIRA",
+                                                    "MIRA",
+                                                    "FURADOURO",
+                                                    "CAIS DO BICO",
+                                                    "FIGUEIRA DA FOZ") ~ "27.9.a.c.n",
+                                        nome %in% c("NAZARE",
+                                                    "PENICHE",
+                                                    "FOZ DO ARELHO",
+                                                    "VIEIRA DE LEIRIA",
+                                                    "CASCAIS",
+                                                    "SESIMBRA",
+                                                    "COSTA DA CAPARICA",
+                                                    "TRAFARIA",
+                                                    "FONTE DA TELHA",
+                                                    "SETUBAL",
+                                                    "CARRASQUEIRA",
+                                                    "SINES",
+                                                    "V. NOVA DE MILFONTES",
+                                                    "AZENHA DO MAR",
+                                                    "ZAMBUJEIRA") ~ "27.9.a.c.s",
+                                        T ~ "27.a.s.a")),
+            land_kg = QESTIMADA,
+            nome = nome)
+
+rbind(land, land19)
 
 ```       
 
@@ -418,7 +490,7 @@ viag_sines <- c(106841,106857,106876,106931,106897,106930,106915,106835,106921,1
 
 lota16 %>%
   filter(!C_CLASSE %in% c(998,999)) %>%
-  filter(!ID_VIAGEM %in% viag_sines) %>% View
+  filter(!ID_VIAGEM %in% viag_sines) %>% 
     ggplot + 
   geom_point(aes(y = PESO_AM, x = C_CLASSE, col = PORTO_NOME)) + 
   theme_light() + 
