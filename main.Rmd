@@ -173,15 +173,15 @@ land19 %>%
   # # group_by(ANO, MES, nome, ARTE) %>%
   # summarise(QESTIMADA = sum(QESTIMADA)) %>%
   # ungroup %>%
-  transmute(HARBOUR = PORTO_SLV,
-            LANDING_COUNTRY = "PRT",
-            GEAR = case_when(ARTE == 5 ~ "PS",
+  transmute(HARBOUR = factor(PORTO_SLV),
+            LANDING_COUNTRY = factor("PRT"),
+            GEAR = factor(case_when(ARTE == 5 ~ "PS",
                              ARTE == 3 ~ "OTB",
-                             ARTE == 13 ~ "MIS"),
-            FISHING_5 = "euseila",
-            SPECIES = "OCC",
-            YEAR = ANO,
-            MONTH = MES,
+                             ARTE == 13 ~ "MIS")),
+            FISHING_5 = factor("euseila"),
+            SPECIES = factor("OCC"),
+            YEAR = factor(ANO),
+            MONTH = factor(MES),
             SUB.AREA = factor(case_when(nome %in% c("VIANA DO CASTELO",
                                                     "CAMINHA",
                                                     "ESPOSENDE",
@@ -221,12 +221,12 @@ land19 %>%
                                                     "ZAMBUJEIRA") ~ "27.9.a.c.s",
                                         T ~ "27.a.s.a")),
             land_kg = QESTIMADA,
-            nome = nome)
+            nome = factor(nome))
 
-rbind(land, land19)
+land <- rbind(land, land19)
+
 
 ```       
-
 
 
 ## Biologicas
