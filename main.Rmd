@@ -5,117 +5,29 @@ output: html_notebook
 
 # Setup
 
-```{r libraries,message=F}
-library(RMySQL)
-# library(dbConnect)
+```{r}
+library(ggplot2)
 library(dplyr)
 library(reshape2)
 library(openxlsx)
-library(ggplot2)
-library(RJDBC)
 ```
 
-```{r connection}
-source('con_nautilus.R')
-```
-
-```{r info}
-info<-dbGetQuery(con,"select * from INFORMATION_SCHEMA.TABLES")
-
-info[info$TABLE_TYPE=="BASE TABLE",] %>%
-  select(TABLE_NAME) %>% unique %>% c
-```
-
-# Extração de dados
-
-```{sql connection = con, output.var = bio_ceph}
-create temporary table batata(
-select * from especie_generica p1
-  where p1.cod_fao = 'OCC') 
-select * from amostra_especie p2
-  where p2.especie = batata.id
-```
-
-```{sql connection = con, output.var = caca}
-select * from amostra_especie p2
- -- where  p2.especie = 'OCC'
-```
-
-
-```{sql connection = con, output.var = porra}
-select * from bio_cefalopode p1,
-              amostra_especie p2,
-              caixa p3,
-              denominacao p4
-        where p2.especie = 'OCC'
-```
-
-```{r}
-names(bio_ceph)
-bio_ceph %>% filter()
-```
-
-# Compra de dados???
-
-```{r}
-compra_dados_sppfc <- dbGetQuery(con, readr::read_file('compra_dados_sppfc.sql'))
-```
-
-# Conversao pesos OCC
-
-```{r}
-lota_pesos_comp_polvos <- dbGetQuery(con, readr::read_file('lota_pesos_comp_polvos.sql'))
-```
-
-# Biológicas
-
-```{sql query_bio_16}
---mail de 04.02.2019
-select p1.id_viagem,p1.id_amostra,p1.data,to_char(p1.data,'DD-MM-YYYY') data_am,to_char(p1.data,'RRRR') ano,p2.porto_nome,p2.regiao,
-p1.arte_eu,p1.cod_fao,p1.matricula,p1.navio,p1.desembarque,p1.peso_am,
-p3.cat,p3.peso_a_c,p3.peso_d_c,p3.n_ind,p4.c_classe,p4.indif
-from dbm.tbl_amostra p1, dbm.tbl_porto_old p2, dbm.tbl_cat_amostra p3, dbm.tbl_classe_comp p4
-where p2.porto_slv=p1.porto_slv and p3.id_amostra=p1.id_amostra and p4.id_cat_amostra=p3.id_cat_amostra
-and to_char(p1.data,'RRRR') between 1997 and 2016
-and p1.tipo_amostra='C'
-and p1.cod_fao in ('OCC','COM','EOI','EDT','SQR','SQC','TDQ','SQM','SQE','CTC')
-order by data,porto_nome,matricula,cod_fao,cat,c_classe
-;
-
-
-select p1.id_amostra,p3.ID_BIO_CEFALOPODES,p1.data,to_char(p1.data,'DD-MM-YYYY') data_am,to_char(p1.data,'RRRR') ano,p2.porto_nome,p2.regiao,
-p1.arte_eu,p1.cod_fao,p1.matricula,p1.navio,p1.desembarque,p1.peso_am,
-p3.N_OBS,p3.C_CLASSE,p3.C_INDIVIDUAL,p3.P_INDIVIDUAL,p3.P_EVISCERADO,p3.SEXO,p3.EST_MATURACAO,p3.E_CALCIFICADA,p3.E_CALCIFICADA_TIPO,p3.E_CALCIFICADA_LIDA_OLD,p3.C_PENIS,
-p3.C_TEST,p3.P_TEST,p3.P_CESPERM,p3.P_OVARIO,p3.P_GOVID,p3.D_GOVID,p3.C_GASS,p3.P_GASS,p3.D_GNID,p3.P_GNID,p3.P_COVID,p3.E_ESTOM,p3.P_ESTOM,p3.P_GDIGEST,p3.FECUNDADA,p3.HISTOLOGIA,p3.OBS,p3.C_ESTATOL,
-p3.N_ANEIS_HIALINOS,p3.ID_EST_CALCIFICADAS
-from dbm.tbl_amostra p1, dbm.tbl_porto_old p2, dbm.tbl_bio_cefalopodes p3
-where p2.porto_slv=p1.porto_slv and p3.id_amostra=p1.id_amostra
-and to_char(p1.data,'RRRR') between 1997 and 2016
-and p1.tipo_amostra='B'
-and p1.cod_fao in ('OCC','COM','EOI','EDT','SQR','SQC','TDQ','SQM','SQE','CTC')
-order by data,porto_nome,matricula,cod_fao,n_obs,c_classe
-```
-
-
-```{r query_bio_19}
-teste <- dbGetQuery(con, readr::read_file('bio_naut.sql'))
-```
 
 # Checklist
 
-- [x] Desembarques 1986 - 2019
+-   [x] Desembarques 1986 - 2019
 
-- [x] Biologicas 1997 - 2016
+-   [x] Biologicas 1997 - 2016
 
-- [x] Biologicas 2017 - 2019 
+-   [x] Biologicas 2017 - 2019
 
-- [x] Lotas - 1997 - 2016
+-   [x] Lotas - 1997 - 2016
 
-- [x] Lotas - 2017 - 2019
+-   [x] Lotas - 2017 - 2019
 
-- [ ] Respescar scritp dos cephs
+-   [ ] Respescar scritp dos cephs
 
-- [ ] Procurar ampliaçõe de SOL
+-   [ ] Procurar ampliaçõe de SOL
 
 # Limpeza de dados
 
@@ -124,8 +36,14 @@ load("C:/Google Drive/2021_occ_paper/outputs_queries_naut.Rdata")
 ```
 
 ## Desembarques
- 
+
 ```{r}
+portos_slv <- read.csv("dados/codigos_portos.csv")
+portos_slv[182,] <- c(40950, "CAIS DO BICO", "csbic", "NW","AVEIRO", "PTCDB", "CDB",NA,NA)
+```
+
+```{r}
+# pulpito é o 826
 land <- read.csv("PT_land_1986_2019.csv", sep = ";")
 
 land <- 
@@ -135,16 +53,94 @@ land %>%
   transmute(LANDING_COUNTRY = factor(LANDING_COUNTRY),
             HARBOUR = factor(HARBOUR),
             GEAR = factor(GEAR),
-            FISHING_5 = factor(FISHING_5),
+            # FISHING_5 = factor(FISHING_5),
             SPECIES = factor("OCC"),
             YEAR = factor(YEAR),
             MONTH = factor(MONTH),
             SUB.AREA = factor(SUB.AREA),
             land_kg = LANDINGS_WEIGHT_KG)
-```       
 
-```{r}
-portos_slv <- read.csv("dados/codigos_portos.csv")
+land <-
+merge(land,
+      (portos_slv %>% select(codporto, nome)),
+      by.x = "HARBOUR",
+      by.y = "codporto",
+      all.x = T, all.y = F)
+
+land19 <- read.csv('dados//1_desembarques-mensais_2019.csv', sep = ';', dec = ',')
+
+land19 <-
+merge(land19,
+      (portos_slv %>% select(codporto, nome)),
+      by.x = "PORTO_SLV",
+      by.y = "codporto",
+      all.x = T, all.y = F)
+
+land19 <-
+land19 %>%
+  filter(ESPECIE_SLV == 826) %>%
+  filter(PESQUEIRO == "N") %>%
+  filter(nome!= "PONTA DELGADA (DOCA)") %>%
+  # # group_by(ANO, MES, nome, ARTE) %>%
+  # summarise(QESTIMADA = sum(QESTIMADA)) %>%
+  # ungroup %>%
+  transmute(HARBOUR = factor(PORTO_SLV),
+            LANDING_COUNTRY = factor("PRT"),
+            GEAR = factor(case_when(ARTE == 5 ~ "PS",
+                             ARTE == 3 ~ "OTB",
+                             ARTE == 13 ~ "MIS")),
+            # FISHING_5 = factor("euseila"),
+            SPECIES = factor("OCC"),
+            YEAR = factor(ANO),
+            MONTH = factor(MES),
+            SUB.AREA = factor(case_when(nome %in% c("VIANA DO CASTELO",
+                                                    "CAMINHA",
+                                                    "ESPOSENDE",
+                                                    "V. PRAIA DA ANCORA",
+                                                    "CASTELO DO NEIVA",
+                                                    "FAO",
+                                                    "POVOA DO VARZIM", 
+                                                    "V. CHA",
+                                                    "V. CONDE", 
+                                                    "MATOSINHOS",
+                                                    "ANJEIRAS",
+                                                    "AFURADA",
+                                                    "AGUDA",
+                                                    "ESPINHO",
+                                                    "VALBOM",
+                                                    "AVEIRO",
+                                                    "VAGUEIRA",
+                                                    "TORREIRA",
+                                                    "MIRA",
+                                                    "FURADOURO",
+                                                    "CAIS DO BICO",
+                                                    "FIGUEIRA DA FOZ") ~ "27.9.a.c.n",
+                                        nome %in% c("NAZARE",
+                                                    "PENICHE",
+                                                    "FOZ DO ARELHO",
+                                                    "VIEIRA DE LEIRIA",
+                                                    "CASCAIS",
+                                                    "SESIMBRA",
+                                                    "COSTA DA CAPARICA",
+                                                    "TRAFARIA",
+                                                    "FONTE DA TELHA",
+                                                    "SETUBAL",
+                                                    "CARRASQUEIRA",
+                                                    "SINES",
+                                                    "V. NOVA DE MILFONTES",
+                                                    "AZENHA DO MAR",
+                                                    "ZAMBUJEIRA") ~ "27.9.a.c.s",
+                                        T ~ "27.a.s.a")),
+            land_kg = QESTIMADA,
+            nome = factor(nome))
+
+land <- rbind(land, land19)
+
+land %>% group_by(HARBOUR, LANDING_COUNTRY, GEAR,
+                  SPECIES, YEAR, MONTH, SUB.AREA, nome) %>%
+  summarise(land_kg = sum(land_kg, na.rm = T)) -> land
+
+
 ```
 
 ## Biologicas
@@ -268,6 +264,13 @@ bio_naut %>%
 ```{r lota16}
 lota16 <- read.csv("allspp_19972016_cmp.csv", sep = ";", dec = ",")
 
+OTB <-
+unique(lota16$ARTE_EU)[grepl('OTB',unique(lota16$ARTE_EU)) |
+                         grepl('TRAWL',unique(lota16$ARTE_EU))]
+PS <-
+unique(lota16$ARTE_EU)[grepl('SEI',unique(lota16$ARTE_EU)) ]
+
+
 lota16 <-
   lota16 %>% 
     filter(COD_FAO == 'OCC') %>%
@@ -275,11 +278,15 @@ lota16 <-
               ID_AMOSTRA = factor(ID_AMOSTRA),
               DATA = as.POSIXct(DATA_AM, format = ('%d-%m-%Y')),
               ANO = factor(ANO),
-              PORTO_NOME = factor(PORTO_NOME),
+              PORTO_NOME = factor(case_when(PORTO_NOME == "VILA REAL S. ANTONIO" ~ "VRSA",
+                                            TRUE ~ PORTO_NOME)),
               REGIAO = case_when(REGIAO == "N" ~ "27.a.c.n",
                                  REGIAO == "C" ~ "27.a.c.s",
                                           TRUE ~ "27.a.s.a"),
               ARTE_EU = factor(ARTE_EU),
+              GEAR = factor(case_when(ARTE_EU %in% OTB ~ "OTB",
+                                      ARTE_EU %in% PS ~ "PS",
+                                      TRUE ~ "MIS")),
               COD_FAO = factor('OCC'),
               land_kg = DESEMBARQUE,
               PESO_AM = PESO_AM,
@@ -305,7 +312,6 @@ lota16 <-
               INDIF = INDIF
               )
 ```
-
 
 ```{r lota19}
 lota19 <-
@@ -343,16 +349,19 @@ lota_pesos_comp_polvos %>%
 
 # TO DO
 
-- [ ] Verificar outliers nos comprimentos
+-   [ ] Verificar outliers nos comprimentos
 
-  * tabela **bio16** alterna entre comprimentos a cm e mm *corrigido*
-  * bicho de sagres foi pesado em kg *corrigido*
-  * devo um fino ao DD porque ele encontrou o polvo da fuzeta 
+    -   tabela **bio16** alterna entre comprimentos a cm e mm *corrigido*
+    -   bicho de sagres foi pesado em kg *corrigido*
+    -   devo um fino ao DD porque ele encontrou o polvo da fuzeta
 
-- [ ] Uniformizar portos entre as duas tabelas
-- [ ] Não temos categoria nos dados SIC; que fazer?
-- [ ] Uniformizar pesos e comprimentos na lota 19
-- [ ] Ampliações
+-   [ ] Uniformizar portos entre as duas tabelas
+
+-   [ ] Não temos categoria nos dados SIC; que fazer?
+
+-   [ ] Uniformizar pesos e comprimentos na lota 19
+
+-   [ ] Ampliações
 
 ```{r limpa_bio_16}
 cm_mm <- which(bio16$C_INDIVIDUAL < 40)
@@ -408,7 +417,7 @@ viag_sines <- c(106841,106857,106876,106931,106897,106930,106915,106835,106921,1
 
 lota16 %>%
   filter(!C_CLASSE %in% c(998,999)) %>%
-  filter(!ID_VIAGEM %in% viag_sines) %>% View
+  filter(!ID_VIAGEM %in% viag_sines) %>% 
     ggplot + 
   geom_point(aes(y = PESO_AM, x = C_CLASSE, col = PORTO_NOME)) + 
   theme_light() + 
@@ -417,6 +426,89 @@ lota16 %>%
   theme(legend.position = 'bottom')
 ```
 
+Metodologia das ampliações: feitas de forma directa, entre o peso amostrado da denominação e peso total da denominação.
+
+Não foram obtidos landings para 42 observações (classes de comprimento) uma vez que a unidade amostral correspondente não tem desembarques associados
+
+```{r amplia_lota16}
+
+# 1 - acrescentamos desembarque da unidade amostral correspondente: EGRUPART x MES x ANO x LOTA
+
+merge((lota16 %>% mutate(MES = gsub('(?<=\\b|-)0',
+                                    '',
+                                    format(lota16$DATA, format = '%m'),
+                                    perl=TRUE))),
+      (land %>% select(nome, GEAR, YEAR, MONTH, land_kg)),
+      by.x = c('PORTO_NOME', 'GEAR','ANO', 'MES'),
+      by.y = c('nome', 'GEAR', 'YEAR', 'MONTH'),
+      all.x = T, all.y = F) %>%
+             mutate(INDIF = case_when(is.na(INDIF) ~ 0,
+                               TRUE ~ as.double(INDIF)), # limpa os NAs de INDIF
+             land_kg.x = case_when(is.na(land_kg.x) ~ PESO_D_C,
+                                   TRUE ~ land_kg.x),
+             PESO_AM = case_when(is.na(PESO_AM) & 
+                                   PESO_D_C == land_kg.x &
+                                   PESO_A_C == PESO_D_C ~ PESO_D_C,
+                                  is.na(PESO_AM) &
+                                    PESO_A_C != PESO_D_C ~ PESO_A_C,
+                                  is.na(PESO_AM) &
+                                    PESO_A_C == PESO_D_C &
+                                    PESO_D_C != land_kg.x ~ PESO_A_C,
+                                 TRUE ~ as.double(PESO_AM)),
+             n_amplia = INDIF * land_kg.x/PESO_AM) %>%
+    group_by(REGIAO, PORTO_NOME, GEAR, ANO, MES, C_CLASSE) %>%
+    summarise(desemb = unique(land_kg.y),
+              desemb_viag = sum(land_kg.x),
+              n = sum(n_amplia),
+              n_final = n_amplia * desemb / desemb_viag) %>%  #a partir daqui é o check
+  filter(REGIAO == "27.a.c.n") %>%
+  filter(GEAR == "MIS") %>%
+  filter(MES == "5") %>%
+  filter(ANO == "2012") %>%
+  group_by(C_CLASSE) %>%
+  summarise(freq = sum(n_final)/1000) %>% View
+
+  
+
+# para ver as obersvaçoes que nao tem desembarques associados
+# %>% filter(is.na(land_kg.y)) %>% View
+
+
+
+
+
+
+      group_by(PORTO_NOME, ARTE_EU,ANO,MES) %>%
+      summarise()
+#acabar
+
+lota16 %>%
+  group_by(ID_VIAGEM,cat) %>%
+  summarise(desemb = unique(land_kg),
+            D_C = unique(PESO_D_C)) %>%
+  group_by(ID_VIAGEM) %>%
+  summarise(desemb = unique(desemb),
+            DC = sum(D_C)) %>%
+  filter(abs(desemb - DC) > 0.5) %>% View
+```
+
+```{r amplia 16}
+
+```
+
+
+
+
+```{r}
+id <- paste(land$nome, land$GEAR, land$YEAR, land$MONTH, sep = "_")
+length(unique(id))
+
+id[duplicated(id)]
+```
+
+
+
+-   140 viagens com discrepância: decidir
 
 ## Proposta:
 
