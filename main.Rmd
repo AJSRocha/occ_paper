@@ -5,101 +5,13 @@ output: html_notebook
 
 # Setup
 
-```{r libraries,message=F}
-library(RMySQL)
-# library(dbConnect)
+```{r}
+library(ggplot2)
 library(dplyr)
 library(reshape2)
 library(openxlsx)
-library(ggplot2)
-library(RJDBC)
 ```
 
-```{r connection}
-source('con_nautilus.R')
-```
-
-```{r info}
-info<-dbGetQuery(con,"select * from INFORMATION_SCHEMA.TABLES")
-
-info[info$TABLE_TYPE=="BASE TABLE",] %>%
-  select(TABLE_NAME) %>% unique %>% c
-```
-
-# Extração de dados
-
-```{sql connection = con, output.var = bio_ceph}
-create temporary table batata(
-select * from especie_generica p1
-  where p1.cod_fao = 'OCC') 
-select * from amostra_especie p2
-  where p2.especie = batata.id
-```
-
-```{sql connection = con, output.var = caca}
-select * from amostra_especie p2
- -- where  p2.especie = 'OCC'
-```
-
-```{sql connection = con, output.var = porra}
-select * from bio_cefalopode p1,
-              amostra_especie p2,
-              caixa p3,
-              denominacao p4
-        where p2.especie = 'OCC'
-```
-
-```{r}
-names(bio_ceph)
-bio_ceph %>% filter()
-```
-
-# Compra de dados???
-
-\@ref()
-
-```{r}
-compra_dados_sppfc <- dbGetQuery(con, readr::read_file('compra_dados_sppfc.sql'))
-```
-
-# Conversao pesos OCC
-
-```{r}
-lota_pesos_comp_polvos <- dbGetQuery(con, readr::read_file('lota_pesos_comp_polvos.sql'))
-```
-
-# Biológicas
-
-```{sql query_bio_16}
---mail de 04.02.2019
-select p1.id_viagem,p1.id_amostra,p1.data,to_char(p1.data,'DD-MM-YYYY') data_am,to_char(p1.data,'RRRR') ano,p2.porto_nome,p2.regiao,
-p1.arte_eu,p1.cod_fao,p1.matricula,p1.navio,p1.desembarque,p1.peso_am,
-p3.cat,p3.peso_a_c,p3.peso_d_c,p3.n_ind,p4.c_classe,p4.indif
-from dbm.tbl_amostra p1, dbm.tbl_porto_old p2, dbm.tbl_cat_amostra p3, dbm.tbl_classe_comp p4
-where p2.porto_slv=p1.porto_slv and p3.id_amostra=p1.id_amostra and p4.id_cat_amostra=p3.id_cat_amostra
-and to_char(p1.data,'RRRR') between 1997 and 2016
-and p1.tipo_amostra='C'
-and p1.cod_fao in ('OCC','COM','EOI','EDT','SQR','SQC','TDQ','SQM','SQE','CTC')
-order by data,porto_nome,matricula,cod_fao,cat,c_classe
-;
-
-
-select p1.id_amostra,p3.ID_BIO_CEFALOPODES,p1.data,to_char(p1.data,'DD-MM-YYYY') data_am,to_char(p1.data,'RRRR') ano,p2.porto_nome,p2.regiao,
-p1.arte_eu,p1.cod_fao,p1.matricula,p1.navio,p1.desembarque,p1.peso_am,
-p3.N_OBS,p3.C_CLASSE,p3.C_INDIVIDUAL,p3.P_INDIVIDUAL,p3.P_EVISCERADO,p3.SEXO,p3.EST_MATURACAO,p3.E_CALCIFICADA,p3.E_CALCIFICADA_TIPO,p3.E_CALCIFICADA_LIDA_OLD,p3.C_PENIS,
-p3.C_TEST,p3.P_TEST,p3.P_CESPERM,p3.P_OVARIO,p3.P_GOVID,p3.D_GOVID,p3.C_GASS,p3.P_GASS,p3.D_GNID,p3.P_GNID,p3.P_COVID,p3.E_ESTOM,p3.P_ESTOM,p3.P_GDIGEST,p3.FECUNDADA,p3.HISTOLOGIA,p3.OBS,p3.C_ESTATOL,
-p3.N_ANEIS_HIALINOS,p3.ID_EST_CALCIFICADAS
-from dbm.tbl_amostra p1, dbm.tbl_porto_old p2, dbm.tbl_bio_cefalopodes p3
-where p2.porto_slv=p1.porto_slv and p3.id_amostra=p1.id_amostra
-and to_char(p1.data,'RRRR') between 1997 and 2016
-and p1.tipo_amostra='B'
-and p1.cod_fao in ('OCC','COM','EOI','EDT','SQR','SQC','TDQ','SQM','SQE','CTC')
-order by data,porto_nome,matricula,cod_fao,n_obs,c_classe
-```
-
-```{r query_bio_19}
-teste <- dbGetQuery(con, readr::read_file('bio_naut.sql'))
-```
 
 # Checklist
 
