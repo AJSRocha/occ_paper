@@ -10,8 +10,13 @@ library(ggplot2)
 library(dplyr)
 library(reshape2)
 library(openxlsx)
+library(data.table)
 ```
+# Objectivos
 
+-   [ ] Importar e limpar dados
+-   [ ] Fazer ampliações
+-   [ ] Análise
 
 # Checklist
 
@@ -29,7 +34,7 @@ library(openxlsx)
 
 -   [ ] Procurar ampliaçõe de SOL
 
-# Limpeza de dados
+# Importar e limpar dados
 
 ```{r}
 load("C:/Google Drive/2021_occ_paper/outputs_queries_naut.Rdata")
@@ -130,7 +135,7 @@ land19 %>%
                                                     "V. NOVA DE MILFONTES",
                                                     "AZENHA DO MAR",
                                                     "ZAMBUJEIRA") ~ "27.9.a.c.s",
-                                        T ~ "27.a.s.a")),
+                                        T ~ "27.9.a.s.a")),
             land_kg = QESTIMADA,
             nome = factor(nome))
 
@@ -156,9 +161,9 @@ bio16 %>%
             DATA = as.POSIXct(DATA_AM, format = '%d-%m-%Y'),
             ANO = factor(ANO),
             PORTO = droplevels(factor(PORTO_NOME)),
-            REGIAO = case_when(REGIAO == "N" ~ "27.a.c.n",
-                               REGIAO == "C" ~ "27.a.c.s",
-                                        TRUE ~ "27.a.s.a"),
+            REGIAO = case_when(REGIAO == "N" ~ "27.9.a.c.n",
+                               REGIAO == "C" ~ "27.9.a.c.s",
+                                        TRUE ~ "27.9.a.s.a") %>% factor,
             ARTE_EU = factor(ARTE_EU),
             especie_am = factor("OCC"),
             land_kg = DESEMBARQUE, # desembarque da denominação na viagem
@@ -205,7 +210,7 @@ bio16 %>%
 
 ```
 
-```{r bio19 }
+```{r bio_19 }
 bio_naut %>% group_by(ano, trim, estrategia_amostragem) %>%
   summarise(cona = length(unique(id_viagem)))
 
@@ -220,7 +225,7 @@ bio_naut %>%
             REGIAO = factor( 
               case_when(regiao == "Sul" ~ "27.9.a.s.a",
                                regiao == "SW" ~ "27.9.a.c.s",
-                               regiao == "NW" ~ "27.a.c.n")),
+                               regiao == "NW" ~ "27.9.a.c.n")),
             DATA = as.POSIXct(data_venda, format = '%Y-%m-%d'),
             trim = factor(trim),
             ANO = factor(ano),
@@ -261,7 +266,7 @@ bio_naut %>%
 
 ## Lotas
 
-```{r lota16}
+```{r lota_16}
 lota16 <- read.csv("allspp_19972016_cmp.csv", sep = ";", dec = ",")
 
 OTB <-
@@ -280,9 +285,9 @@ lota16 <-
               ANO = factor(ANO),
               PORTO_NOME = factor(case_when(PORTO_NOME == "VILA REAL S. ANTONIO" ~ "VRSA",
                                             TRUE ~ PORTO_NOME)),
-              REGIAO = case_when(REGIAO == "N" ~ "27.a.c.n",
-                                 REGIAO == "C" ~ "27.a.c.s",
-                                          TRUE ~ "27.a.s.a"),
+              REGIAO = case_when(REGIAO == "N" ~ "27.9.a.c.n",
+                                 REGIAO == "C" ~ "27.9.a.c.s",
+                                          TRUE ~ "27.a.9.s.a"),
               ARTE_EU = factor(ARTE_EU),
               GEAR = factor(case_when(ARTE_EU %in% OTB ~ "OTB",
                                       ARTE_EU %in% PS ~ "PS",
@@ -313,7 +318,7 @@ lota16 <-
               )
 ```
 
-```{r lota19}
+```{r lota_19}
 lota19 <-
 lota_pesos_comp_polvos %>%
             # filter(estrategia_amostragem == "Concurrent Sampling") %>%
@@ -362,6 +367,8 @@ lota_pesos_comp_polvos %>%
 -   [ ] Uniformizar pesos e comprimentos na lota 19
 
 -   [ ] Ampliações
+
+# Limpezas
 
 ```{r limpa_bio_16}
 cm_mm <- which(bio16$C_INDIVIDUAL < 40)
@@ -513,3 +520,83 @@ id[duplicated(id)]
 ## Proposta:
 
 Depois de determninar curvas de peso-comprimento, fazer predict das amostragens em lota e comparar com o peso desembarcado da categoria
+
+# Caracterizar desemabarques
+
+```{r}
+land %>%
+  
+  ggplot() + 
+  geom_bar(stat = 'identity',
+           aes(x = YEAR, y = land_kg/1000, fill = SUB.AREA)) + 
+  theme_light() + 
+  theme(legend.position = 'bottom',
+        axis.text.x = element_text(angle = 90))
+
+```
+
+
+
+# Relações Peso - Comprimento
+
+```{r}
+bio_tmp <-
+data.frame(regiao = forcats::fct_c(bio16$REGIAO, bio19$REGIAO),
+           comp_manto = c(bio16$C_INDIVIDUAL_corr, bio19$comp_manto * 10),
+           peso = c(bio16$P_INDIVIDUAL, bio19$peso_total),
+           ano = forcats::fct_c(bio16[,'ANO'], bio19[,'ANO']),
+           mes = c(
+                  format(bio16$DATA, format = '%m'),
+                  format(bio19$DATA, format = '%m')),
+           sexo = forcats::fct_c(bio16$SEXO, bio19$SEXO),
+           mat = forcats::fct_c(bio16$EST_MATURACAO, bio19$EST_MATURACAO))
+c(
+format(bio16$DATA, format = '%m'),
+format(bio19$DATA, format = '%m'))
+
+
+bio_tmp <-
+  bio_tmp %>%
+    filter(peso > 0) %>%
+    filter(comp_manto < 600) %>%
+    filter(comp_manto > 0) %>% 
+    filter(sexo %in% c('M', 'F'))
+
+# curto e grosso, relaçao wL
+
+wt.lm <-lm(log(bio_tmp$peso) ~ log(bio_tmp$comp_manto))
+a <- wt.lm$coefficients[1]
+b <- wt.lm$coefficients[2]
+
+
+bio_tmp %>%
+  ggplot() + 
+    geom_point(aes(x = comp_manto,
+                   y = peso,
+                   col = sexo)) +
+  geom_line(aes(x = comp_manto,
+                 y = exp(a) * comp_manto ^ b)) +
+  facet_grid(regiao ~ sexo) +
+  theme_light() + 
+  theme(legend.position = 'bottom')
+
+# ensaio de maturacao
+
+bio_tmp %>%
+  group_by(mes, sexo, regiao) %>%
+  summarise(imatur = mean(mat %in% c('1', '2'))) %>%
+            
+  ggplot() + 
+    geom_line(aes(x = mes,
+                   y = imatur,
+                   group = sexo)) +
+
+  facet_grid(regiao ~ sexo) +
+  theme_light() + 
+  theme(legend.position = 'bottom')
+
+```
+
+
+
+

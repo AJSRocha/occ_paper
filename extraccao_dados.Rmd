@@ -13,9 +13,13 @@ library(ggplot2)
 library(RJDBC)
 ```
 
+Este script tem a ligação à base de dados da nautilus; o script em si não está no github por causa das credenciais.
+
 ```{r connection}
 source('con_nautilus.R')
 ```
+
+Este chunk pode ser adaptado para obter o nome das tabelas, que normalmente pode ser um problema.
 
 ```{r info, eval = F}
 info<-dbGetQuery(con,"select * from INFORMATION_SCHEMA.TABLES")
@@ -91,3 +95,4 @@ order by data,porto_nome,matricula,cod_fao,n_obs,c_classe
 ```{r query_bio_19}
 teste <- dbGetQuery(con, readr::read_file('bio_naut.sql'))
 ```
+
